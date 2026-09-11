@@ -1,0 +1,239 @@
+/* RESET & BASE */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #ffffff;
+    color: #202124;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px;
+}
+
+.container {
+    max-width: 820px;
+    width: 100%;
+}
+
+.logo {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    text-align: center;
+    color: #202124;
+}
+
+.logo span {
+    color: #1a73e8;
+}
+
+.search-box {
+    position: relative;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 14px 48px 14px 50px;
+    font-size: 18px;
+    border: 2px solid #dfe1e5;
+    border-radius: 24px;
+    outline: none;
+    background: white;
+    color: #202124;
+}
+
+.search-box input:focus {
+    border-color: #1a73e8;
+}
+
+.search-box .icon {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #9aa0a6;
+}
+
+.search-box .clear {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #9aa0a6;
+    font-size: 18px;
+    display: none;
+}
+
+.search-box .clear:hover {
+    color: #202124;
+}
+
+.stats {
+    font-size: 14px;
+    color: #70757a;
+    margin-bottom: 16px;
+    min-height: 24px;
+}
+
+.stats span {
+    font-weight: 600;
+    color: #202124;
+}
+
+.result {
+    background: white;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.result:last-of-type {
+    border-bottom: none;
+}
+
+.result .meta {
+    font-size: 13px;
+    color: #70757a;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.result .meta .folder {
+    color: #70757a;
+    font-family: monospace;
+    font-size: 13px;
+}
+
+.result .meta .date {
+    color: #70757a;
+    font-size: 13px;
+}
+
+.result .url {
+    margin-bottom: 2px;
+}
+
+.result .url a {
+    color: #006621;
+    font-size: 14px;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.result .url a:hover {
+    text-decoration: underline;
+}
+
+.result .title {
+    margin-bottom: 2px;
+}
+
+.result .title a {
+    color: #1a0dab;
+    font-size: 18px;
+    font-weight: 500;
+    text-decoration: none;
+    line-height: 1.4;
+}
+
+.result .title a:hover {
+    text-decoration: underline;
+}
+
+.result .title strong {
+    background: #feefc3;
+    padding: 0 2px;
+    border-radius: 2px;
+    font-weight: 700;
+}
+
+.result .url strong {
+    background: #feefc3;
+    padding: 0 2px;
+    border-radius: 2px;
+    font-weight: 700;
+}
+
+.tags-row {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tag-item {
+    display: inline-block;
+    background: #e8f0fe;
+    color: #1a73e8;
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.no-results {
+    text-align: center;
+    padding: 60px 20px;
+    color: #70757a;
+}
+
+.no-results .big {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.no-results code {
+    background: #f1f3f4;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+@media (max-width: 600px) {
+    body {
+        padding: 16px 12px;
+    }
+    .logo {
+        font-size: 28px;
+        margin-bottom: 20px;
+    }
+    .search-box input {
+        font-size: 16px;
+        padding: 12px 44px 12px 44px;
+        border-radius: 20px;
+    }
+    .result .title a {
+        font-size: 16px;
+    }
+    .result .url a {
+        font-size: 13px;
+    }
+    .result .meta {
+        font-size: 12px;
+        gap: 10px;
+    }
+    .tag-item {
+        font-size: 11px;
+        padding: 1px 8px;
+    }
+    .no-results .big {
+        font-size: 36px;
+    }
+}
+/* ── DATE LINE ── */
+.date-line {
+    font-size: 13px;
+    color: #70757a;
+    margin-bottom: 4px;
+}

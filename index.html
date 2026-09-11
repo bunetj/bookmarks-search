@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FF Bookmark Search</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="logo">FF Bookmark Search</div>
+
+        <div class="search-box">
+            <span class="icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Search your bookmarks..." autofocus>
+            <span class="clear" id="clearBtn">✕</span>
+        </div>
+
+        <div class="stats" id="stats">
+            Loading bookmarks... <span id="count"></span>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
