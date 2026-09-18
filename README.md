@@ -12,11 +12,14 @@ add bookmarks.html from the export to the root
 
 search operators
 
-- name:
-- folder:
-- / as OR
-- ""
-- date:
-- site:
+```
+name:
+folder:
+/       OR
+""
+date:   created
+site:
+-       NOT
+#       tag
+```
 
-search #tags
