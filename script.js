@@ -27,29 +27,30 @@ function parseBookmarksHTML(html) {
             tags = tagsAttr.split(",").map(function(t) { return t.trim(); }).filter(function(t) { return t; });
             if (tags.length > 0) tagCount++;
         }
-        let folder = "Unfiled";
-        let parent = a.parentElement;
-        while (parent) {
-            const h3 = parent.querySelector("h3");
-            if (h3) {
-                folder = h3.textContent.trim();
-                break;
-            }
-            parent = parent.parentElement;
-        }
-        let fullPath = folder;
+        // Walk up Firefox's <dt><h3>Folder</h3><dl>…</dl></dt> nesting.
+        // For each ancestor <dl>, the folder name is the <h3> that is a
+        // direct child of that <dl>'s parent <dt>.
         let ancestors = [];
-        let p = a.parentElement;
-        while (p) {
-            const h3 = p.querySelector("h3");
-            if (h3) {
-                ancestors.push(h3.textContent.trim());
+        let dl = a.closest("dl");
+        while (dl) {
+            let dt = dl.parentElement;
+            if (dt && dt.tagName === "DT") {
+                for (let i = 0; i < dt.children.length; i++) {
+                    if (dt.children[i].tagName === "H3") {
+                        ancestors.push(dt.children[i].textContent.trim());
+                        break;
+                    }
+                }
             }
-            p = p.parentElement;
+            dl = dl.parentElement ? dl.parentElement.closest("dl") : null;
         }
-        if (ancestors.length > 0) {
-            fullPath = ancestors.reverse().join("/");
-        }
+        ancestors.reverse();
+        let folder = ancestors.length > 0
+            ? ancestors[ancestors.length - 1]
+            : "Unfiled";
+        let fullPath = ancestors.length > 0
+            ? ancestors.join("/")
+            : folder;
         bookmarks.push({
             title: title || "Untitled",
             url: url,
@@ -241,7 +242,31 @@ function doSearch() {
                 while (tagVal.startsWith("#")) tagVal = tagVal.substring(1);
                 parsedTokens.push({ type: "tag", value: tagVal });
             } else if (t.startsWith("-")) {
-                parsedTokens.push({ type: "exclude", value: t.substring(1).toLowerCase() });
+                // Operator-aware negation: strip "-", re-inspect the rest.
+                var neg = t.substring(1);
+                var negLower = neg.toLowerCase();
+                if (neg.startsWith('"') && neg.endsWith('"') && neg.length >= 2) {
+                    parsedTokens.push({ type: "exclude", subtype: "phrase",
+                        value: neg.substring(1, neg.length - 1).toLowerCase() });
+                } else if (negLower.startsWith("folder:")) {
+                    parsedTokens.push({ type: "exclude", subtype: "folder",
+                        value: neg.substring(7).toLowerCase() });
+                } else if (negLower.startsWith("date:")) {
+                    parsedTokens.push({ type: "exclude", subtype: "date",
+                        value: neg.substring(5).toLowerCase() });
+                } else if (negLower.startsWith("site:")) {
+                    parsedTokens.push({ type: "exclude", subtype: "site",
+                        value: neg.substring(5).toLowerCase() });
+                } else if (negLower.startsWith("name:")) {
+                    parsedTokens.push({ type: "exclude", subtype: "name",
+                        value: neg.substring(5).toLowerCase() });
+                } else if (neg.startsWith("#")) {
+                    var negTag = neg.substring(1).toLowerCase();
+                    while (negTag.startsWith("#")) negTag = negTag.substring(1);
+                    parsedTokens.push({ type: "exclude", subtype: "tag", value: negTag });
+                } else {
+                    parsedTokens.push({ type: "exclude", subtype: "text", value: negLower });
+                }
             } else {
                 parsedTokens.push({ type: "text", value: t.toLowerCase() });
             }
@@ -299,9 +324,28 @@ function doSearch() {
                             }
                         }
                         break;
-                    case "exclude":
-                        if (!searchText.includes(p.value)) tokenMatched = true;
+                    case "exclude": {
+                        var sub = p.subtype || "text";
+                        var negHit;
+                        if (sub === "tag") {
+                            negHit = false;
+                            for (var ti2 = 0; ti2 < bTags.length; ti2++) {
+                                if (bTags[ti2].indexOf(p.value) !== -1) { negHit = true; break; }
+                            }
+                        } else if (sub === "folder") {
+                            negHit = folderText.indexOf(p.value) !== -1;
+                        } else if (sub === "date") {
+                            negHit = dateText.indexOf(p.value) !== -1;
+                        } else if (sub === "site") {
+                            negHit = urlLower.indexOf(p.value) !== -1;
+                        } else if (sub === "name") {
+                            negHit = titleLower.indexOf(p.value) !== -1;
+                        } else {
+                            negHit = searchText.indexOf(p.value) !== -1;
+                        }
+                        if (!negHit) tokenMatched = true;
                         break;
+                    }
                 }
 
                 if (tokenMatched) {
@@ -450,6 +494,51 @@ clearBtn.style.display = "none";
 console.log("Script loaded, loading bookmarks...");
 loadBookmarks();
 
+// url-state:start
+// ── URL STATE ──
+// doSearch() is called by Enter, Escape, the clear button, and the lucky
+// button. In every case the URL should reflect what's now in the box.
+(function () {
+    var original = doSearch;
+    doSearch = function () {
+        original.apply(this, arguments);
+        var q = searchInput.value.trim();
+        var target = q ? "#q=" + encodeURIComponent(q) : "#";
+        if (location.hash !== target) {
+            history.pushState(null, "", target);
+        }
+    };
+
+    function restore(q) {
+        if (searchInput.value === q) return;
+        searchInput.value = q;
+        clearBtn.style.display = q ? "block" : "none";
+        doSearch();
+    }
+
+    window.addEventListener("popstate", function () {
+        var m = location.hash.match(/^#q=(.*)$/);
+        var q = "";
+        if (m) { try { q = decodeURIComponent(m[1]); } catch (e) {} }
+        restore(q);
+    });
+
+    // Restore once bookmarks finish loading.
+    var tries = 0;
+    (function wait() {
+        if (bookmarks.length > 0 || tries++ > 100) {
+            var m = location.hash.match(/^#q=(.*)$/);
+            if (m) {
+                var q;
+                try { q = decodeURIComponent(m[1]); } catch (e) { q = ""; }
+                if (q) restore(q);
+            }
+            return;
+        }
+        setTimeout(wait, 50);
+    })();
+})();
+// url-state:end
 // lucky-btn:start
 document.addEventListener("DOMContentLoaded", function () {
     var btn = document.getElementById("luckyBtn");
