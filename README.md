@@ -1,8 +1,8 @@
 # bookmarks search
 
-search your firefox bookmarks like it's a search engine.
-
 the imaginary internet of your shit or print.
+
+![](demo2.png)
 
 ## usage
 
