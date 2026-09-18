@@ -105,26 +105,21 @@ function doSearch() {
     }
 
     // ─── Step 1: Parse quoted phrases FIRST ──────────────────────────────────
-    // This handles quotes with slashes, spaces, and special characters
     var rawTokens = [];
     var current = "";
     var inQuotes = false;
-    var quoteChar = "";
-    
+
     for (var i = 0; i < query.length; i++) {
         var ch = query[i];
-        
+
         if (ch === "\"" && (i === 0 || query[i-1] !== "\\")) {
             if (inQuotes) {
-                // Closing quote
                 inQuotes = false;
                 if (current) {
-                    // Keep the quotes as part of the token for later detection
                     rawTokens.push('"' + current + '"');
                     current = "";
                 }
             } else {
-                // Opening quote
                 inQuotes = true;
                 current = "";
             }
@@ -142,49 +137,40 @@ function doSearch() {
     console.log("Raw tokens:", rawTokens);
 
     // ─── Step 2: Split each token by / (OR) ──────────────────────────────────
-    // BUT: skip splitting if token is quoted (starts and ends with ")
-    
     function splitBySlashForOR(token) {
-        // Check if token is quoted (starts and ends with ")
         var isQuoted = token.startsWith('"') && token.endsWith('"');
         if (isQuoted) {
-            // Quoted token: return as-is (literal)
             return [token];
         }
-        
-        // Check if token is an operator with quoted value
+
         var lower = token.toLowerCase();
-        var isOperator = lower.startsWith("name:") || 
-                         lower.startsWith("folder:") || 
-                         lower.startsWith("site:") || 
+        var isOperator = lower.startsWith("name:") ||
+                         lower.startsWith("folder:") ||
+                         lower.startsWith("site:") ||
                          lower.startsWith("date:") ||
                          lower.startsWith("#");
-        
+
         if (isOperator) {
             var colonIndex = token.indexOf(":");
             var operator = "";
             var value = "";
-            
+
             if (colonIndex !== -1) {
                 operator = token.substring(0, colonIndex + 1);
                 value = token.substring(colonIndex + 1);
             } else {
-                // #tag case
                 operator = "#";
                 value = token.substring(1);
             }
-            
-            // If value is quoted, treat as literal
+
             if (value.startsWith('"') && value.endsWith('"')) {
                 return [token];
             }
-            
-            // If value is empty or just slashes, return as single token (literal)
+
             if (value === "" || value.match(/^\/+$/)) {
                 return [token];
             }
-            
-            // Normal OR split with slashes
+
             if (value.includes("/")) {
                 var parts = value.split("/");
                 var result = [];
@@ -199,8 +185,7 @@ function doSearch() {
                 return result;
             }
         }
-        
-        // Regular token: split by / for OR
+
         if (token.includes("/")) {
             var parts = token.split("/");
             var result = [];
@@ -214,7 +199,7 @@ function doSearch() {
             }
             return result;
         }
-        
+
         return [token];
     }
 
@@ -234,16 +219,13 @@ function doSearch() {
     for (var g = 0; g < groups.length; g++) {
         var group = groups[g];
         var parsedTokens = [];
-        
+
         for (var i = 0; i < group.length; i++) {
             var t = group[i];
             var lower = t.toLowerCase();
-            
-            // Check if token is quoted (literal phrase)
             var isQuoted = t.startsWith('"') && t.endsWith('"');
-            
+
             if (isQuoted) {
-                // Remove quotes and treat as phrase
                 var phrase = t.substring(1, t.length - 1);
                 parsedTokens.push({ type: "phrase", value: phrase.toLowerCase() });
             } else if (lower.startsWith("folder:")) {
@@ -255,14 +237,16 @@ function doSearch() {
             } else if (lower.startsWith("name:")) {
                 parsedTokens.push({ type: "name", value: t.substring(5) });
             } else if (t.startsWith("#")) {
-                parsedTokens.push({ type: "tag", value: t.substring(1).toLowerCase() });
+                var tagVal = t.substring(1).toLowerCase();
+                while (tagVal.startsWith("#")) tagVal = tagVal.substring(1);
+                parsedTokens.push({ type: "tag", value: tagVal });
             } else if (t.startsWith("-")) {
                 parsedTokens.push({ type: "exclude", value: t.substring(1).toLowerCase() });
             } else {
                 parsedTokens.push({ type: "text", value: t.toLowerCase() });
             }
         }
-        
+
         parsedGroups.push(parsedTokens);
     }
 
@@ -275,16 +259,19 @@ function doSearch() {
         var urlLower = b.url.toLowerCase();
         var dateText = b.dateAdded.toLowerCase();
         var titleLower = b.title.toLowerCase();
-        var bTags = b.tags.map(function(t) { return t.toLowerCase(); });
-        
+        var bTags = (b.tags || []).map(function(t) {
+            t = t.toLowerCase().trim();
+            return t.startsWith("#") ? t.substring(1) : t;
+        });
+
         for (var g = 0; g < parsedGroups.length; g++) {
             var group = parsedGroups[g];
             var groupMatched = false;
-            
+
             for (var i = 0; i < group.length; i++) {
                 var p = group[i];
                 var tokenMatched = false;
-                
+
                 switch (p.type) {
                     case "text":
                         if (searchText.includes(p.value)) tokenMatched = true;
@@ -305,24 +292,29 @@ function doSearch() {
                         if (titleLower.includes(p.value.toLowerCase())) tokenMatched = true;
                         break;
                     case "tag":
-                        if (bTags.includes(p.value)) tokenMatched = true;
+                        for (var ti = 0; ti < bTags.length; ti++) {
+                            if (bTags[ti].indexOf(p.value) !== -1) {
+                                tokenMatched = true;
+                                break;
+                            }
+                        }
                         break;
                     case "exclude":
                         if (!searchText.includes(p.value)) tokenMatched = true;
                         break;
                 }
-                
+
                 if (tokenMatched) {
                     groupMatched = true;
                     break;
                 }
             }
-            
+
             if (!groupMatched) {
                 return false;
             }
         }
-        
+
         return true;
     });
 
@@ -457,3 +449,35 @@ clearBtn.addEventListener("click", function() {
 clearBtn.style.display = "none";
 console.log("Script loaded, loading bookmarks...");
 loadBookmarks();
+
+// lucky-btn:start
+document.addEventListener("DOMContentLoaded", function () {
+    var btn = document.getElementById("luckyBtn");
+    if (!btn) return;
+
+    btn.addEventListener("click", function () {
+        // Pool: current search results if a query is active, else all bookmarks.
+        var hasQuery = searchInput.value.trim() !== "";
+        var pool = (hasQuery && filtered.length > 0) ? filtered : bookmarks;
+
+        if (!pool || pool.length === 0) return;
+
+        // Take up to 5 random picks without repeats.
+        var picks = pool.slice();
+        for (var i = picks.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var tmp = picks[i]; picks[i] = picks[j]; picks[j] = tmp;
+        }
+        filtered = picks.slice(0, 5);
+
+        // Clear the box so results area is consistent with what's shown.
+        searchInput.value = "";
+        if (clearBtn) clearBtn.style.display = "none";
+
+        renderResults(filtered);
+        statsDiv.textContent = "\ud83c\udf40 " + filtered.length + " lucky results";
+    });
+});
+// lucky-btn:end
+
+
